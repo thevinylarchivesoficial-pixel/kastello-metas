@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kastello — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<style>
+  :root {
+    --orange: #E8650A;
+    --orange-dark: #b84e07;
+    --orange-dim: rgba(232,101,10,0.12);
+    --green: #1D9E75;
+    --red: #E24B4A;
+    --bg: #111112;
+    --bg2: #1a1a1c;
+    --bg3: #222225;
+    --border: rgba(255,255,255,0.07);
+    --text: #f0ede8;
+    --text2: #888884;
+    --text3: #555552;
+    --font: 'Barlow', sans-serif;
+    --font-cond: 'Barlow Condensed', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+  /* ---- LOGIN ---- */
+  .login-wrap {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .login-card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 16px;
+    padding: 40px 36px; width: 100%; max-width: 380px;
+  }
+  .login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+  .login-brand { font-family: var(--font-cond); font-size: 26px; font-weight: 700; color: var(--orange); }
+  .login-sub { font-size: 11px; color: var(--text2); letter-spacing: 0.1em; text-transform: uppercase; }
+  .login-title { font-size: 14px; color: var(--text2); margin-bottom: 24px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); margin-bottom: 8px; }
+  .form-group input {
+    width: 100%; height: 44px; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0 14px; color: var(--text); font-family: var(--font); font-size: 14px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-group input:focus { border-color: var(--orange); }
+  .btn-login {
+    width: 100%; height: 46px; background: var(--orange); color: #fff;
+    border: none; border-radius: 8px; font-family: var(--font-cond); font-size: 16px;
+    font-weight: 700; letter-spacing: 0.05em; cursor: pointer; transition: background 0.2s;
+    margin-top: 8px;
+  }
+  .btn-login:hover { background: var(--orange-dark); }
+  .btn-login:active { transform: scale(0.98); }
+  .login-err { color: #F09595; font-size: 12px; margin-top: 12px; min-height: 18px; text-align: center; }
+
+  /* ---- ADMIN ---- */
+  .header {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 14px 32px; display: flex; align-items: center; gap: 14px;
+  }
+  .brand-name { font-family: var(--font-cond); font-size: 26px; font-weight: 700; color: var(--orange); }
+  .brand-sub { font-size: 10px; color: var(--text2); letter-spacing: 0.1em; text-transform: uppercase; }
+  .admin-badge { margin-left: auto; font-size: 11px; color: var(--orange); background: var(--orange-dim); border: 1px solid rgba(232,101,10,0.25); padding: 4px 14px; border-radius: 99px; }
+  .btn-logout { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 6px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; margin-left: 10px; }
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  .main { padding: 28px 32px; max-width: 900px; margin: 0 auto; }
+
+  .kpi-mini { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .kpi-m { background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--orange); border-radius: 10px; padding: 14px 16px; }
+  .kpi-m.green { border-left-color: var(--green); }
+  .kpi-m.red { border-left-color: var(--red); }
+  .kpi-m-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--text2); margin-bottom: 6px; }
+  .kpi-m-val { font-family: var(--font-cond); font-size: 26px; font-weight: 700; }
+  .kpi-m-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+  .form-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 20px; }
+  .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text2); margin-bottom: 16px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+  .fg { display: flex; flex-direction: column; gap: 6px; }
+  .fg label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); }
+  .fg input {
+    height: 42px; background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0 14px; color: var(--text); font-family: var(--font); font-size: 14px; outline: none;
+  }
+  .fg input:focus { border-color: var(--orange); }
+  .btn-add {
+    height: 42px; padding: 0 22px; background: var(--orange); color: #fff;
+    border: none; border-radius: 8px; font-family: var(--font-cond); font-size: 15px;
+    font-weight: 700; cursor: pointer; white-space: nowrap; letter-spacing: 0.04em;
+  }
+  .btn-add:hover { background: var(--orange-dark); }
+  .btn-add:active { transform: scale(0.98); }
+  .form-msg { font-size: 12px; margin-top: 12px; min-height: 18px; }
+  .form-msg.ok { color: var(--green); }
+  .form-msg.err { color: var(--red); }
+
+  .table-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .table-card table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .table-card th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text2); padding: 12px 16px; border-bottom: 1px solid var(--border); text-align: left; background: var(--bg3); }
+  .table-card td { padding: 11px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .table-card tr:last-child td { border-bottom: none; }
+  .table-card tr:hover td { background: rgba(255,255,255,0.02); }
+  .del-btn { background: transparent; border: 1px solid var(--border); color: var(--text2); padding: 5px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+  .del-btn:hover { border-color: var(--red); color: var(--red); }
+  .empty { padding: 32px; text-align: center; color: var(--text3); font-size: 13px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+  .badge-ok { background: rgba(29,158,117,0.15); color: #5DCAA5; }
+  .badge-no { background: rgba(226,75,74,0.15); color: #F09595; }
+  .badge-ahead { background: rgba(232,101,10,0.15); color: #EF9F27; }
+
+  .footer { text-align: center; padding: 24px; font-size: 11px; color: var(--text3); }
+  .dash-link { color: var(--orange); text-decoration: none; }
+  .dash-link:hover { text-decoration: underline; }
+
+  [style*="display:none"] { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <svg width="38" height="44" viewBox="0 0 42 48" fill="none">
+        <path d="M21 1L3 9V25C3 35 11 43.5 21 47C31 43.5 39 35 39 25V9L21 1Z" fill="#1e1e20" stroke="#E8650A" stroke-width="2"/>
+        <text x="21" y="31" text-anchor="middle" font-size="19" font-weight="700" fill="#E8650A" font-family="Georgia,serif">K</text>
+      </svg>
+      <div>
+        <div class="login-brand">Kastello</div>
+        <div class="login-sub">painel administrativo</div>
+      </div>
+    </div>
+    <p class="login-title">Acesso restrito — faça login para continuar.</p>
+    <div class="form-group">
+      <label>E-mail</label>
+      <input type="email" id="loginEmail" placeholder="seu@email.com" />
+    </div>
+    <div class="form-group">
+      <label>Senha</label>
+      <input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <button class="btn-login" onclick="doLogin()">Entrar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminScreen" style="display:none">
+  <div class="header">
+    <svg width="36" height="42" viewBox="0 0 42 48" fill="none">
+      <path d="M21 1L3 9V25C3 35 11 43.5 21 47C31 43.5 39 35 39 25V9L21 1Z" fill="#1e1e20" stroke="#E8650A" stroke-width="2"/>
+      <text x="21" y="31" text-anchor="middle" font-size="19" font-weight="700" fill="#E8650A" font-family="Georgia,serif">K</text>
+    </svg>
+    <div>
+      <div class="brand-name">Kastello</div>
+      <div class="brand-sub">tudo em construção</div>
+    </div>
+    <span class="admin-badge" id="monthBadge">—</span>
+    <button class="btn-logout" onclick="doLogout()">Sair</button>
+  </div>
+
+  <div class="main">
+    <div class="kpi-mini" id="kpiMini">
+      <div class="kpi-m"><div class="kpi-m-label">meta hoje</div><div class="kpi-m-val" id="ak1">—</div><div class="kpi-m-sub" id="ak1s">—</div></div>
+      <div class="kpi-m"><div class="kpi-m-label">realizado</div><div class="kpi-m-val" id="ak2">—</div><div class="kpi-m-sub" id="ak2s">—</div></div>
+      <div class="kpi-m"><div class="kpi-m-label">diferença</div><div class="kpi-m-val" id="ak3">—</div><div class="kpi-m-sub" id="ak3s"></div></div>
+      <div class="kpi-m"><div class="kpi-m-label">meta mês</div><div class="kpi-m-val">100%</div><div class="kpi-m-sub">R$ 2.076.000</div></div>
+    </div>
+
+    <div class="form-card">
+      <div class="section-title">lançar resultado do dia</div>
+      <div class="form-row">
+        <div class="fg">
+          <label>Data</label>
+          <input type="date" id="inputDate" />
+        </div>
+        <div class="fg">
+          <label>Valor realizado (R$)</label>
+          <input type="number" id="inputVal" placeholder="ex: 95000" min="0" step="100" />
+        </div>
+        <button class="btn-add" onclick="addEntry()">+ Adicionar</button>
+      </div>
+      <div class="form-msg" id="formMsg"></div>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead><tr><th style="width:18%">Data</th><th style="width:28%">Valor (R$)</th><th style="width:16%">% dia</th><th style="width:20%">Acumulado</th><th style="width:12%">Status</th><th style="width:6%"></th></tr></thead>
+        <tbody id="tableBody"><tr><td colspan="6" class="empty">carregando...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a class="dash-link" href="index.html">← ver dashboard público</a>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// CONFIGURAÇÃO FIREBASE — substitua pelos seus dados
+// =====================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyCe1JUlhS3r9i4YZSItDIZsWZf4hFPpuno",
+  authDomain: "kastello-metas.firebaseapp.com",
+  databaseURL: "https://kastello-metas-default-rtdb.firebaseio.com",
+  projectId: "kastello-metas",
+  storageBucket: "kastello-metas.firebasestorage.app",
+  messagingSenderId: "625257962794",
+  appId: "1:625257962794:web:2273fe4852773ec3089253"
+};
+// =====================================================
+
+const META_MENSAL = 2076000;
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  document.getElementById('loginErr').textContent = '';
+  auth.signInWithEmailAndPassword(email, pass).catch(e => {
+    document.getElementById('loginErr').textContent = 'E-mail ou senha incorretos.';
+  });
+}
+
+function doLogout() { auth.signOut(); }
+
+auth.onAuthStateChanged(user => {
+  document.getElementById('loginScreen').style.display = user ? 'none' : 'flex';
+  document.getElementById('adminScreen').style.display = user ? 'block' : 'none';
+  if (user) startListening();
+});
+
+let unsubscribe = null;
+function startListening() {
+  document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
+  db.ref('lancamentos').on('value', snap => {
+    const data = snap.val() || {};
+    const entries = Object.values(data);
+    updateKPIs(entries);
+    renderTable(entries);
+  });
+}
+
+function getDiasUteis(mes, ano) {
+  const dias = []; let u = 0;
+  const d = new Date(ano, mes-1, 1);
+  while (d.getMonth() === mes-1) {
+    const dw = d.getDay();
+    if (dw!==0&&dw!==6) u++;
+    dias.push({date: new Date(d), uteis: u, isUtil: dw!==0&&dw!==6});
+    d.setDate(d.getDate()+1);
+  }
+  return dias;
+}
+
+function getTotalUteis(mes, ano) {
+  return getDiasUteis(mes, ano).filter(d => d.isUtil).reduce((m,d) => d.uteis > m ? d.uteis : m, 0);
+}
+
+function getUteisAteHoje(mes, ano) {
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  let u = 0; const d = new Date(ano, mes-1, 1);
+  while (d <= hoje && d.getMonth() === mes-1) { if(d.getDay()!==0&&d.getDay()!==6)u++; d.setDate(d.getDate()+1); }
+  return u;
+}
+
+function getMonth(entries) {
+  if (!entries.length) { const n = new Date(); return {mes: n.getMonth()+1, ano: n.getFullYear()}; }
+  const s = [...entries].sort((a,b)=>a.date<b.date?-1:1);
+  const [ano, mes] = s[0].date.split('-');
+  return {mes: parseInt(mes), ano: parseInt(ano)};
+}
+
+function updateKPIs(entries) {
+  const {mes, ano} = getMonth(entries);
+  const tu = getTotalUteis(mes, ano);
+  const mpu = META_MENSAL / tu;
+  const du = getUteisAteHoje(mes, ano);
+  const metaPct = (mpu * du / META_MENSAL * 100);
+  const totalReal = entries.reduce((s,e) => s + parseFloat(e.valor), 0);
+  const realPct = totalReal / META_MENSAL * 100;
+  const diff = realPct - metaPct;
+
+  document.getElementById('monthBadge').textContent = MONTHS[mes-1] + ' / ' + ano;
+  document.getElementById('ak1').textContent = metaPct.toFixed(1)+'%';
+  document.getElementById('ak1s').textContent = du+' de '+tu+' dias úteis';
+  document.getElementById('ak2').textContent = realPct.toFixed(1)+'%';
+  document.getElementById('ak2s').textContent = 'R$ '+totalReal.toLocaleString('pt-BR',{minimumFractionDigits:2});
+
+  const ak3 = document.getElementById('ak3');
+  ak3.textContent = (diff>=0?'+':'')+diff.toFixed(1)+'pp';
+  ak3.style.color = diff >= 0 ? 'var(--green)' : 'var(--red)';
+
+  let stl, stc;
+  if (diff > 0.5) { stl='adiantado'; stc='badge-ahead'; }
+  else if (diff >= -0.5) { stl='no prazo'; stc='badge-ok'; }
+  else { stl='atrasado'; stc='badge-no'; }
+  document.getElementById('ak3s').innerHTML = '<span class="badge '+stc+'">'+stl+'</span>';
+
+  const cards = document.querySelectorAll('.kpi-m');
+  cards[1].className = 'kpi-m ' + (realPct >= metaPct ? 'green' : 'red');
+  cards[2].className = 'kpi-m ' + (diff >= 0 ? 'green' : 'red');
+}
+
+function renderTable(entries) {
+  const tbody = document.getElementById('tableBody');
+  if (!entries.length) { tbody.innerHTML='<tr><td colspan="6" class="empty">nenhum lançamento ainda.</td></tr>'; return; }
+  const {mes, ano} = getMonth(entries);
+  const tu = getTotalUteis(mes, ano);
+  const mpu = META_MENSAL / tu;
+
+  const sorted = [...entries].sort((a,b)=>b.date<a.date?-1:1);
+  let acum = 0;
+  const acumMap = {};
+  [...entries].sort((a,b)=>a.date<b.date?-1:1).forEach(e => { acum += parseFloat(e.valor); acumMap[e.date] = acum; });
+
+  tbody.innerHTML = sorted.map(e => {
+    const pct = (parseFloat(e.valor)/META_MENSAL*100).toFixed(1);
+    const ap = (acumMap[e.date]/META_MENSAL*100).toFixed(1);
+    const [a,m,d] = e.date.split('-');
+    let u=0; const dt=new Date(parseInt(a),parseInt(m)-1,1);
+    while(dt<=new Date(parseInt(a),parseInt(m)-1,parseInt(d))){ if(dt.getDay()!==0&&dt.getDay()!==6)u++; dt.setDate(dt.getDate()+1); }
+    const metaDia = mpu*u/META_MENSAL*100;
+    const df = parseFloat(ap) - metaDia;
+    let stl, stc;
+    if(df>0.5){stl='adiantado';stc='badge-ahead';}
+    else if(df>=-0.5){stl='no prazo';stc='badge-ok';}
+    else{stl='atrasado';stc='badge-no';}
+    return `<tr>
+      <td>${d}/${m}/${a}</td>
+      <td>R$ ${parseFloat(e.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+      <td style="color:#888">${pct}%</td>
+      <td style="font-weight:600">${ap}%</td>
+      <td><span class="badge ${stc}">${stl}</span></td>
+      <td><button class="del-btn" onclick="removeEntry('${e._key}')">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function addEntry() {
+  const dateVal = document.getElementById('inputDate').value;
+  const val = parseFloat(document.getElementById('inputVal').value);
+  const msg = document.getElementById('formMsg');
+  if (!dateVal) { msg.className='form-msg err'; msg.textContent='Informe a data.'; return; }
+  if (!val || val <= 0) { msg.className='form-msg err'; msg.textContent='Informe um valor válido.'; return; }
+  const key = db.ref('lancamentos').push().key;
+  await db.ref('lancamentos/' + key).set({ _key: key, date: dateVal, valor: val });
+  document.getElementById('inputVal').value = '';
+  msg.className='form-msg ok'; msg.textContent='Lançado com sucesso!';
+  setTimeout(() => msg.textContent='', 2500);
+}
+
+async function removeEntry(key) {
+  if (!confirm('Remover este lançamento?')) return;
+  await db.ref('lancamentos/' + key).remove();
+}
+</script>
+</body>
+</html>
